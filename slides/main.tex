@@ -13,7 +13,6 @@
 \usepackage{algorithm} % Added for algorithms
 \usepackage{algpseudocode} % Added for algorithms
 \usepackage{hyperref} % Added for videos
-\usepackage{multimedia}
 \setbeamertemplate{footline}[frame number]
 
 %----------------------------------------------------------------------------------------
@@ -232,7 +231,11 @@
 
 \begin{frame}{MCTS applied to CartPole-v1}
     \centering
-    \movie[externalviewer]{\includegraphics[width=\textheight, keepaspectratio]{images/cart_pole_mcts.png}}{videos/cart_pole_mcts.mp4}
+    \href{https://www.youtube.com/watch?v=LtIqCVRqRTw}{
+        \includegraphics[width=0.5\textwidth]{images/cart_pole_mcts.png}
+    }
+    \vfill
+    \small \textit{Click image to watch on YouTube}
 \end{frame}
 
 
@@ -286,7 +289,11 @@
 
 \begin{frame}{CEM applied to CartPole-v1}
     \centering
-    \movie[externalviewer]{\includegraphics[width=\textheight, keepaspectratio]{images/cart_pole_cem.png}}{videos/cart_pole_cem.mp4}
+    \href{https://www.youtube.com/watch?v=N8gq00_RGWk}{
+        \includegraphics[width=0.5\textwidth]{images/cart_pole_cem.png}
+    }
+    \vfill
+    \small \textit{Click image to watch on YouTube}
 \end{frame}
 
 %----------------------------------------------------------------------------------------
@@ -328,9 +335,9 @@
         \item \textbf{Backbone:} \texttt{ResNet18} (Pretrained on ImageNet).
         \item \textbf{Head:} Linear layer mapping features $\to$ 5 action logits.
     \end{itemize}
-    
+
     \vspace{0.3cm}
-    
+
     \textbf{Action Masking.} The agent is guided through early exploration by masking suboptimal actions:
     \begin{itemize}
         \item \textbf{Phase 1} Mask \{0, 1, 2, 4\}.
@@ -345,7 +352,11 @@
 
 \begin{frame}{CEM applied to CarRacing-v3}
     \centering
-    \movie[externalviewer]{\includegraphics[width=\textheight, keepaspectratio]{images/car_racing_cem.png}}{videos/car_racing_cem.mp4}
+    \href{https://www.youtube.com/watch?v=0bJDuGY-rt8}{
+        \includegraphics[width=0.5\textwidth]{images/car_racing_cem.png}
+    }
+    \vfill
+    \small \textit{Click image to watch on YouTube}
 \end{frame}
 
 %------------------------------------------------
