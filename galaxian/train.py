@@ -50,44 +50,68 @@ class Episode:
     reward: float
     steps: tt.List[EpisodeStep]
 
-
 class Model(nn.Module):
-    def __init__(self, n_actions: int, timm_model:str, pretrained: bool = True, head_dim: int = 64):
+    def __init__(self, n_actions: int):
         super().__init__()
-
-        self.backbone = timm.create_model(
-            timm_model,
-            pretrained=pretrained,
-            num_classes=0,
-            global_pool="avg",
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 32, kernel_size=8, stride=4),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1),
+            nn.ReLU(),
+            nn.Flatten(),
         )
-
-        # Freeze backbone params
-        self.backbone.requires_grad_(False)  # sets requires_grad for all params in the module
-        self.backbone.eval()
-
-        nf = self.backbone.num_features
+        with torch.no_grad():
+            dummy = torch.zeros(1, 3, 96, 96)
+            n_flat = self.features(dummy).shape[1]
 
         self.head = nn.Sequential(
-            nn.Linear(nf, head_dim),
+            nn.Linear(n_flat, 512),
             nn.ReLU(),
-            nn.Linear(head_dim, head_dim),
-            nn.ReLU(),
-            nn.Linear(head_dim, n_actions),
+            nn.Linear(512, n_actions),
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # no_grad reduces memory since no autograd graph/activations are stored for the backbone
-        with torch.no_grad():
-            feats = self.backbone(x)
-        q = self.head(feats)
-        return q
+    def forward(self, x):
+        return self.head(self.features(x))
+
+#class Model(nn.Module):
+#    def __init__(self, n_actions: int, timm_model:str, pretrained: bool = True, head_dim: int = 64):
+#        super().__init__()
+#
+#        self.backbone = timm.create_model(
+#            timm_model,
+#            pretrained=pretrained,
+#            num_classes=0,
+#            global_pool="avg",
+#        )
+#
+#        # Freeze backbone params
+#        self.backbone.requires_grad_(False)  # sets requires_grad for all params in the module
+#        self.backbone.eval()
+#
+#        nf = self.backbone.num_features
+#
+#        self.head = nn.Sequential(
+#            nn.Linear(nf, head_dim),
+#            nn.ReLU(),
+#            nn.Linear(head_dim, head_dim),
+#            nn.ReLU(),
+#            nn.Linear(head_dim, n_actions),
+#        )
+#
+#    def forward(self, x: torch.Tensor) -> torch.Tensor:
+#        # no_grad reduces memory since no autograd graph/activations are stored for the backbone
+#        with torch.no_grad():
+#            feats = self.backbone(x)
+#        q = self.head(feats)
+#        return q
 
 def process_obs(obs: np.ndarray) -> torch.Tensor:
     base_transform = T.Compose([
-        T.Resize((224, 224)),
+        T.Resize((96, 96)),
         T.ToTensor(),
-        T.Normalize(mean=(0.485,0.456,0.406), std=(0.229, 0.224,0.225))
+        T.Normalize(mean=(0.5,0.5,0.5), std=(0.5,0.5,0.5))
     ])
 
     img = Image.fromarray(obs.astype(np.uint8))
@@ -183,7 +207,7 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # ---------------------------------------------------------
-    model = Model(n_actions, timm_model="tf_efficientnet_lite0", pretrained=True)
+    model = Model(n_actions)
     model = model.to(device, dtype=torch.float32)
 
     # optimizer only sees trainable params
@@ -211,7 +235,7 @@ def main(args):
         obs_v = obs_v.to(device)
         acts_v = acts_v.to(device)
 
-        for i in range(10):
+        for i in range(20):
             optimizer.zero_grad()
             action_scores_v = model(obs_v)
             loss_v = loss_fn(action_scores_v, acts_v)

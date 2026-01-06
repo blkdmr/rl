@@ -27,13 +27,16 @@ app.disable_disclaimer()
 def main(args):
 
     env = gym.make("LunarLander-v3", continuous=False, gravity=-10.0,
-                    enable_wind=True, wind_power=15.0, turbulence_power=1.5,
-                    render_mode="rgb_array")
+                    enable_wind=False, wind_power=15.0, turbulence_power=1.5,
+                    #render_mode="rgb_array"
+                    render_mode="human")
 
-    env = gym.wrappers.RecordVideo(
-        env,
-        video_folder = args["export"]["video_folder"]
-    )
+    env = gym.wrappers.TimeLimit(env, max_episode_steps=args["env"]["max_episode_steps"])
+
+    #env = gym.wrappers.RecordVideo(
+    #    env,
+    #    video_folder = args["export"]["video_folder"]
+    #)
 
     obs, _ = env.reset()
 
@@ -45,7 +48,6 @@ def main(args):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Defining the model
     model = nn.Sequential(
         nn.Linear(obs_size, 32),
         nn.ReLU(),
@@ -56,10 +58,9 @@ def main(args):
 
     model.load_state_dict(torch.load(args["export"]["model"], weights_only=True))
 
-    done = False
     sm = nn.Softmax(dim=1)
-
-    print("Recording final evaluation episode...")
+    done = False
+    total_reward = 0
     while not done:
         obs_v = torch.tensor(obs, dtype=torch.float32).unsqueeze(0)
         obs_v = obs_v.to(device)
@@ -68,11 +69,12 @@ def main(args):
 
         action = np.argmax(act_probs_v.detach().cpu().numpy()[0])
 
-        next_obs, _ , terminated, truncated, _ = env.step(action)
+        next_obs, reward, terminated, truncated, _ = env.step(action)
         done = terminated or truncated
         obs = next_obs
+        total_reward += reward
 
-    print("Video saved successfully.")
+    print(f"Total reward {total_reward:.2f}")
     env.close()
 
 if __name__ == "__main__":

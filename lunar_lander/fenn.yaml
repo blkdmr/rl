@@ -16,7 +16,7 @@ logger:
 # ---------------------------------------
 
 env:
-  max_episode_steps: 200
+  max_episode_steps: 300
 
 train:
   lr: 1e-3
