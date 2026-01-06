@@ -50,6 +50,39 @@ class Episode:
     reward: float
     steps: tt.List[EpisodeStep]
 
+
+class Model(nn.Module):
+    def __init__(self, n_actions: int, timm_model:str, pretrained: bool = True, head_dim: int = 64):
+        super().__init__()
+
+        self.backbone = timm.create_model(
+            timm_model,
+            pretrained=pretrained,
+            num_classes=0,
+            global_pool="avg",
+        )
+
+        # Freeze backbone params
+        self.backbone.requires_grad_(False)  # sets requires_grad for all params in the module
+        self.backbone.eval()
+
+        nf = self.backbone.num_features
+
+        self.head = nn.Sequential(
+            nn.Linear(nf, head_dim),
+            nn.ReLU(),
+            nn.Linear(head_dim, head_dim),
+            nn.ReLU(),
+            nn.Linear(head_dim, n_actions),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # no_grad reduces memory since no autograd graph/activations are stored for the backbone
+        with torch.no_grad():
+            feats = self.backbone(x)
+        q = self.head(feats)
+        return q
+
 def process_obs(obs: np.ndarray) -> torch.Tensor:
     base_transform = T.Compose([
         T.Resize((224, 224)),
@@ -61,38 +94,6 @@ def process_obs(obs: np.ndarray) -> torch.Tensor:
     x = base_transform(img)
     x = x.to(dtype=torch.float32)
     return x.unsqueeze(0)
-
-
-def test_model(model: nn.Module, device:str, video_folder: str):
-
-    env = gym.make("ALE/Galaxian-v5", obs_type="rgb", render_mode="rgb_array")
-
-    env = gym.wrappers.RecordVideo(
-        env,
-        video_folder=video_folder
-    )
-
-    obs, _ = env.reset()
-
-    done = False
-    sm = nn.Softmax(dim=1)
-
-    print("Recording final evaluation episode...")
-    while not done:
-        obs_v = process_obs(obs)
-        obs_v = obs_v.to(device)
-        with torch.no_grad():
-            act_probs_v = sm(model(obs_v))
-
-        action = np.argmax(act_probs_v.detach().cpu().numpy()[0])
-
-        next_obs, _ , terminated, truncated, _ = env.step(action)
-        done = terminated or truncated
-        obs = next_obs
-
-    print("Video saved successfully.")
-    env.close()
-
 
 def generate_batch(env: gym.Env,
                     model: nn.Module,
@@ -182,17 +183,16 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # ---------------------------------------------------------
-    model = timm.create_model('resnet18', pretrained=True)
-
-    for param in model.parameters():
-        param.requires_grad = args["model"]["backbone"]
-
-    model.fc = nn.Linear(model.fc.in_features, n_actions)
+    model = Model(n_actions, timm_model="tf_efficientnet_lite0", pretrained=True)
     model = model.to(device, dtype=torch.float32)
-    # ---------------------------------------------------------
+
+    # optimizer only sees trainable params
+    optimizer = optim.Adam(
+        params=(p for p in model.parameters() if p.requires_grad),
+        lr=float(args["train"]["lr"]),
+    )
 
     loss_fn = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(params=model.parameters(), lr=args["train"]["lr"])
 
     # TensorBoard writer
     logdir = args["export"]["tensorboard"]
@@ -211,15 +211,15 @@ def main(args):
         obs_v = obs_v.to(device)
         acts_v = acts_v.to(device)
 
-        optimizer.zero_grad()
-        action_scores_v = model(obs_v)
-        loss_v = loss_fn(action_scores_v, acts_v)
-        loss_v.backward()
+        for i in range(10):
+            optimizer.zero_grad()
+            action_scores_v = model(obs_v)
+            loss_v = loss_fn(action_scores_v, acts_v)
+            loss_v.backward()
 
-        optimizer.step()
+            optimizer.step()
 
-        print("%d: loss=%.3f, reward_mean=%.1f, rw_bound=%.1f" % (
-            epoch, loss_v.item(), reward_m, reward_b))
+            print(f"[{epoch}]: loss={loss_v.item():.6f}, reward_mean={reward_m:.1f}, rw_bound={reward_b:.1f}")
 
         # TensorBoard logging
         with torch.no_grad():
@@ -246,8 +246,6 @@ def main(args):
             epoch
         )
         writer.add_scalar("train/elite_samples", int(obs_v.shape[0]), epoch)
-
-    test_model(model, device, args["export"]["video_folder"])
 
     model.eval()
     model = model.to("cpu")
