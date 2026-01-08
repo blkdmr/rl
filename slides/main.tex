@@ -50,15 +50,21 @@
 
 \begin{frame}{What is Reinforcement Learning?}
 
-    Learning setup and objective:
-    \vspace{0.5cm}
+    Reinforcement learning is a learning paradigm based on trial-and-error interaction between an agent and an environment. In particular:
+
+    \vspace{0.3cm}
+
     \begin{itemize}
-        \item Reinforcement learning is a learning paradigm based on trial-and-error interaction with an environment.
-        \item An agent observes states, selects actions, and receives scalar reward signals.
+        \item An agent observes the environment state, selects an action $a$, and receives a scalar reward $r$.
+        \item The environment transitions to a new state $s$ in response to the action.
         \item The objective is to learn a policy that maximizes expected cumulative reward over time.
-        \item Training data is generated online by the agent itself rather than from a fixed dataset.
-        \item Learning is commonly implemented with deep neural networks optimized using backpropagation.
+        \item Training data is generated online by the agent itself, not from a fixed dataset.
+        \item Policies are commonly represented by neural networks trained using backpropagation.
     \end{itemize}
+
+    \vspace{0.3cm}
+
+    Observations may be partial or noisy representations of the true environment state.
 
 \end{frame}
 
@@ -66,145 +72,116 @@
 
 \begin{frame}{Key Challenges in Reinforcement Learning}
 
-    Fundamental difficulties:
+    Challenges specific to the reinforcement learning setting:
     \vspace{0.5cm}
     \begin{itemize}
-        \item Data is non independent and non identically distributed because the agent controls the data collection process through its policy.
-        \item Exploration is required to discover rewarding actions, but excessive exploration reduces short term performance.
-        \item Rewards are often delayed, obscuring the relationship between actions and their long term consequences.
+        \item Data is non-independent and non-identically distributed, since the agent's policy determines which experiences are collected.
+        \item Exploration is required to discover rewarding actions, but excessive exploration degrades short-term performance.
+        \item Rewards are often delayed, making it difficult to associate actions with their long-term consequences.
     \end{itemize}
 
 \end{frame}
 
-%------------------------------------------------
-
-\begin{frame}{Agent-Environment Interaction}
-
-Reinforcement learning is defined by a repeated interaction loop between two components.
-
-\vspace{0.3cm}
-
-Entities involved:
-\begin{itemize}
-    \item Agent: the decision making system that selects actions.
-    \item Environment: the external system that responds to actions.
-\end{itemize}
-
-\vspace{0.25cm}
-
-Information exchanged at each step:
-\begin{itemize}
-    \item Action (a): a control signal chosen by the agent, discrete or continuous.
-    \item State (s): the underlying configuration of the environment.
-    \item Reward (r): a scalar signal evaluating the action outcome.
-\end{itemize}
-
-\vspace{0.3cm}
-
-\small{Note: an observation is a partial or noisy view of the true environment state.}
-
-\end{frame}
-
 
 %------------------------------------------------
 
-\begin{frame}{Markov Process (MP)}
-
-    A Markov Process (MP) is a mathematical model for systems that evolve randomly over time.
-
-    \vspace{0.25cm}
-
-    Markov property:
-    \[
-    P(s_{t+1} \mid s_t) = P(s_{t+1} \mid s_1, s_2, \dots, s_t)
-    \]
-
-    \vspace{0.25cm}
-
-    Interpretation:
-    \begin{itemize}
-        \item The current state is a complete summary of the past.
-        \item Knowing earlier states provides no additional predictive power.
-        \item The system evolves through probabilistic state transitions.
-        \item These transitions are specified by a transition matrix $T$, where
-        \[
-        T_{i,j} = P(S_{t+1} = j \mid S_t = i)
-        \]
-    \end{itemize}
-
-\end{frame}
-
-%------------------------------------------------
-
-\begin{frame}{Markov Reward Process (MRP)}
-
-    A Markov Reward Process (MRP) builds on a MP by introducing a notion of desirability.
-
-    \vspace{0.25cm}
-
-    Interpretation:
-    \begin{itemize}
-        \item Each state or transition produces a scalar reward signal.
-        \item Rewards define what outcomes are considered good or bad.
-        \item Future rewards are discounted by a factor $\gamma$.
-        \item The value function summarizes long term expected reward.
-    \end{itemize}
-
-    \vspace{0.2cm}
-
-    \[
-    V(s) = \mathbb{E}[G_t \mid S_t = s]
-    \]
-
-\end{frame}
+%\begin{frame}{Markov Process (MP)}
+%
+%    A Markov Process (MP) is a mathematical model for systems that evolve randomly over time.
+%
+%    \vspace{0.25cm}
+%
+%    Markov property:
+%    \[
+%    P(s_{t+1} \mid s_t) = P(s_{t+1} \mid s_1, s_2, \dots, s_t)
+%    \]
+%
+%    \vspace{0.25cm}
+%
+%    Interpretation:
+%    \begin{itemize}
+%        \item The current state is a complete summary of the past.
+%        \item Knowing earlier states provides no additional predictive power.
+%        \item The system evolves through probabilistic state transitions.
+%        \item These transitions are specified by a transition matrix $T$, where
+%        \[
+%        T_{i,j} = P(S_{t+1} = j \mid S_t = i)
+%        \]
+%    \end{itemize}
+%
+%\end{frame}
 
 %------------------------------------------------
 
-\begin{frame}{Markov Decision Process (MDP)}
-
-A Markov Decision Process (MDP) extends a MRP by introducing actions that influence system dynamics.
-
-\vspace{0.2cm}
-
-At each time step:
-\begin{itemize}
-    \item The agent observes the current state.
-    \item The agent selects an action.
-    \item The environment transitions to a new state and emits a reward.
-\end{itemize}
-
-\vspace{0.15cm}
-
-Transitions and rewards depend on the chosen action:
-\[
-P(s' \mid s, a), \qquad R(s, a)
-\]
-
-\end{frame}
+%\begin{frame}{Markov Reward Process (MRP)}
+%
+%    A Markov Reward Process (MRP) builds on a MP by introducing a notion of desirability.
+%
+%    \vspace{0.25cm}
+%
+%    Interpretation:
+%    \begin{itemize}
+%        \item Each state or transition produces a scalar reward signal.
+%        \item Rewards define what outcomes are considered good or bad.
+%        \item Future rewards are discounted by a factor $\gamma$.
+%        \item The value function summarizes long term expected reward.
+%    \end{itemize}
+%
+%    \vspace{0.2cm}
+%
+%    \[
+%    V(s) = \mathbb{E}[G_t \mid S_t = s]
+%    \]
+%
+%\end{frame}
 
 %------------------------------------------------
 
-\begin{frame}{Policy}
+%\begin{frame}{Markov Decision Process (MDP)}
+%
+%A Markov Decision Process (MDP) extends a MRP by introducing actions that influence system dynamics.
+%
+%\vspace{0.2cm}
+%
+%At each time step:
+%\begin{itemize}
+%    \item The agent observes the current state.
+%    \item The agent selects an action.
+%    \item The environment transitions to a new state and emits a reward.
+%\end{itemize}
+%
+%\vspace{0.15cm}
+%
+%Transitions and rewards depend on the chosen action:
+%\[
+%P(s' \mid s, a), \qquad R(s, a)
+%\]
+%
+%\end{frame}
 
-The policy specifies how the agent behaves in each state.
+%------------------------------------------------
 
-\vspace{0.2cm}
-
-Stochastic policy definition:
-\[
-\pi(a \mid s) = P(A_t = a \mid S_t = s)
-\]
-
-\vspace{0.2cm}
-
-Interpretation:
-\begin{itemize}
-    \item The policy maps states to probabilities over actions.
-    \item Stochasticity allows exploration of alternative behaviors.
-    \item Fixing the policy removes choice and yields a Markov Reward Process.
-\end{itemize}
-
-\end{frame}
+%\begin{frame}{Policy}
+%
+%The policy specifies how the agent behaves in each state.
+%
+%\vspace{0.2cm}
+%
+%Stochastic policy definition:
+%\[
+%\pi(a \mid s) = P(A_t = a \mid S_t = s)
+%\]
+%
+%\vspace{0.2cm}
+%
+%Interpretation:
+%\begin{itemize}
+%    \item The policy maps states to probabilities over actions.
+%    \item Stochasticity allows exploration of alternative behaviors.
+%    \item Fixing the policy removes choice and yields a Markov Reward Process.
+%\end{itemize}
+%
+%\end{frame}
 
 %------------------------------------------------
 
@@ -237,7 +214,7 @@ Core elements:
 %    SECTION: MCTS on CartPole
 %----------------------------------------------------------------------------------------
 
-\begin{frame}{Monte Carlo Tree Search}
+\begin{frame}{Monte Carlo Tree Search (MCTS)}
 
     Monte Carlo Tree Search is a planning algorithm for sequential decision making.
 
@@ -312,7 +289,7 @@ Reward design:
 %    SECTION: CEM on LunarLander
 %----------------------------------------------------------------------------------------
 
-\begin{frame}{Cross Entropy Method}
+\begin{frame}{Cross Entropy Method (CEM)}
 
     Core idea:
     \begin{itemize}
