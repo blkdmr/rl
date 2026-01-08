@@ -1,7 +1,7 @@
 *.json
 
 *.mp4
-!slides/video/*.mp4
+!slides/videos/*.mp4
 
 *.pth
 logger/
@@ -11,5 +11,8 @@ wandb/
 main.*
 !main.tex
 !main.py
-
+!main.pdf
 .env
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md

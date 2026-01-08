@@ -1,0 +1,14 @@
+project: cartpole_mcts
+
+logger:
+  dir: logger
+
+env:
+  max_episode_steps: 500
+
+mcts:
+  iterations: 40
+  rollout_cap: 30.0
+
+export:
+  video_folder: video

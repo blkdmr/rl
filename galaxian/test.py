@@ -33,11 +33,36 @@ warnings.filterwarnings(
 app = Fenn()
 app.disable_disclaimer()
 
+class Model(nn.Module):
+    def __init__(self, n_actions: int):
+        super().__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 32, kernel_size=8, stride=4),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+        with torch.no_grad():
+            dummy = torch.zeros(1, 3, 96, 96)
+            n_flat = self.features(dummy).shape[1]
+
+        self.head = nn.Sequential(
+            nn.Linear(n_flat, 512),
+            nn.ReLU(),
+            nn.Linear(512, n_actions),
+        )
+
+    def forward(self, x):
+        return self.head(self.features(x))
+
 def process_obs(obs: np.ndarray) -> torch.Tensor:
     base_transform = T.Compose([
-        T.Resize((224, 224)),
+        T.Resize((96, 96)),
         T.ToTensor(),
-        T.Normalize(mean=(0.485,0.456,0.406), std=(0.229, 0.224,0.225))
+        T.Normalize(mean=(0.5,0.5,0.5), std=(0.5,0.5,0.5))
     ])
 
     img = Image.fromarray(obs.astype(np.uint8))
@@ -45,10 +70,13 @@ def process_obs(obs: np.ndarray) -> torch.Tensor:
     x = x.to(dtype=torch.float32)
     return x.unsqueeze(0)
 
+
 @app.entrypoint
 def main(args):
 
     env = gym.make("ALE/Galaxian-v5", obs_type="rgb", render_mode="rgb_array")
+
+    #env = gym.wrappers.TimeLimit(env, max_episode_steps=args["env"]["max_episode_steps"])
 
     env = gym.wrappers.RecordVideo(
         env,
@@ -60,13 +88,8 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # ---------------------------------------------------------
-    model = timm.create_model('resnet18', pretrained=True)
-
-    for param in model.parameters():
-        param.requires_grad = args["model"]["backbone"]
-
-    model.fc = nn.Linear(model.fc.in_features, n_actions)
-    model.load_state_dict(torch.load(args["export"]["model"], weights_only=True))
+    model = Model(n_actions)
+    model.load_state_dict(torch.load(args["export"]["model"]))
     model = model.to(device, dtype=torch.float32)
     # ---------------------------------------------------------
 

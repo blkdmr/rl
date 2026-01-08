@@ -13,15 +13,15 @@
 \usepackage{algorithm} % Added for algorithms
 \usepackage{algpseudocode} % Added for algorithms
 \usepackage{hyperref} % Added for videos
+\usepackage{multimedia}
 \setbeamertemplate{footline}[frame number]
 
 %----------------------------------------------------------------------------------------
 %    TITLE PAGE
 %----------------------------------------------------------------------------------------
 
-\title{Reinforcement Learning}
-
-%\subtitle{}
+\title{Reinforcement Learning-Based Agent Design}
+\subtitle{Implementation in Gymnasium Environments}
 
 % The presenter
 \author{Alessio Russo}
@@ -50,325 +50,473 @@
 
 \begin{frame}{What is Reinforcement Learning?}
 
-    \textbf{Core Principle}
+    Learning setup and objective:
+    \vspace{0.5cm}
     \begin{itemize}
-        \item No pre-defined labels or explicit teacher.
-        \item Agent learns by \textit{interacting} with dynamic environment.
-        \item Objective: maximize cumulative reward signal.
-        \item Uses deep neural networks, SGD, backpropagation with different data flow.
+        \item Reinforcement learning is a learning paradigm based on trial-and-error interaction with an environment.
+        \item An agent observes states, selects actions, and receives scalar reward signals.
+        \item The objective is to learn a policy that maximizes expected cumulative reward over time.
+        \item Training data is generated online by the agent itself rather than from a fixed dataset.
+        \item Learning is commonly implemented with deep neural networks optimized using backpropagation.
     \end{itemize}
 
-    \vspace{0.3cm}
+\end{frame}
 
-    \textbf{Key Challenges}
-    \begin{enumerate}
-        \item \textbf{Non-IID Data:} Observations depend on agent's policy; poor policy $\Rightarrow$ poor coverage.
-        \item \textbf{Exploration vs.\ Exploitation:} Balance trying new actions vs.\ using known rewards.
-        \item \textbf{Credit Assignment:} Actions yield rewards many steps later (e.g., chess moves).
-    \end{enumerate}
+%------------------------------------------------
+
+\begin{frame}{Key Challenges in Reinforcement Learning}
+
+    Fundamental difficulties:
+    \vspace{0.5cm}
+    \begin{itemize}
+        \item Data is non independent and non identically distributed because the agent controls the data collection process through its policy.
+        \item Exploration is required to discover rewarding actions, but excessive exploration reduces short term performance.
+        \item Rewards are often delayed, obscuring the relationship between actions and their long term consequences.
+    \end{itemize}
+
 \end{frame}
 
 %------------------------------------------------
 
 \begin{frame}{Agent-Environment Interaction}
-    RL architecture rests on continuous interaction between agent and environment.
-    
-    \vspace{0.3cm}
-    
-    \textbf{Entities}
+
+Reinforcement learning is defined by a repeated interaction loop between two components.
+
+\vspace{0.3cm}
+
+Entities involved:
+\begin{itemize}
+    \item Agent: the decision making system that selects actions.
+    \item Environment: the external system that responds to actions.
+\end{itemize}
+
+\vspace{0.25cm}
+
+Information exchanged at each step:
+\begin{itemize}
+    \item Action (a): a control signal chosen by the agent, discrete or continuous.
+    \item State (s): the underlying configuration of the environment.
+    \item Reward (r): a scalar signal evaluating the action outcome.
+\end{itemize}
+
+\vspace{0.3cm}
+
+\small{Note: an observation is a partial or noisy view of the true environment state.}
+
+\end{frame}
+
+
+%------------------------------------------------
+
+\begin{frame}{Markov Process (MP)}
+
+    A Markov Process (MP) is a mathematical model for systems that evolve randomly over time.
+
+    \vspace{0.25cm}
+
+    Markov property:
+    \[
+    P(s_{t+1} \mid s_t) = P(s_{t+1} \mid s_1, s_2, \dots, s_t)
+    \]
+
+    \vspace{0.25cm}
+
+    Interpretation:
     \begin{itemize}
-        \item \textbf{Agent:} Decision maker.
-        \item \textbf{Environment:} Physical or virtual world.
+        \item The current state is a complete summary of the past.
+        \item Knowing earlier states provides no additional predictive power.
+        \item The system evolves through probabilistic state transitions.
+        \item These transitions are specified by a transition matrix $T$, where
+        \[
+        T_{i,j} = P(S_{t+1} = j \mid S_t = i)
+        \]
     \end{itemize}
-    
-    \vspace{0.2cm}
-    
-    \textbf{Communication Channels}
-    \begin{itemize}
-        \item \textbf{Action ($a$):} Agent moves (discrete or continuous).
-        \item \textbf{State ($s$):} Internal environment configuration.
-        \item \textbf{Reward ($r$):} Scalar feedback signal.
-    \end{itemize}
-    
-    \vspace{0.3cm}
-    
-    \small{\textit{Note:} An \textbf{observation} is a partial perception of the full state.}
+
 \end{frame}
 
 %------------------------------------------------
 
-\begin{frame}{Markov Process and Markov Reward Process}
-    A process is \textbf{Markovian} if the future depends only on the current state, not the history.
-    \vspace{-0.1cm}
-    $$P(s_{t+1} | s_t) = P(s_{t+1} | s_1, s_2, \dots, s_t)$$
+\begin{frame}{Markov Reward Process (MRP)}
 
-    The dynamics are defined by a \textbf{Transition Matrix} $T$, where cell $(i,j)$ represents the probability of moving from state $i$ to state $j$: $T_{i,j} = P(S_{t+1} = j | S_t = i)$
+    A Markov Reward Process (MRP) builds on a MP by introducing a notion of desirability.
+
+    \vspace{0.25cm}
+
+    Interpretation:
+    \begin{itemize}
+        \item Each state or transition produces a scalar reward signal.
+        \item Rewards define what outcomes are considered good or bad.
+        \item Future rewards are discounted by a factor $\gamma$.
+        \item The value function summarizes long term expected reward.
+    \end{itemize}
 
     \vspace{0.2cm}
-    An MRP extends the MP by associating a scalar reward with states or transitions. In particular:
-    
-    \begin{itemize}
-        \item \textbf{Discount Factor ($\gamma$):} Determines present value of future rewards ($\gamma = 0$ myopic, $\gamma \to 1$ far-sighted).
-        \item \textbf{State Value Function $V(s)$:} The expected return starting from state $s$: $V(s) = \mathbb{E}[G_t | S_t = s]$
-    \end{itemize}
+
+    \[
+    V(s) = \mathbb{E}[G_t \mid S_t = s]
+    \]
 
 \end{frame}
 
 %------------------------------------------------
 
 \begin{frame}{Markov Decision Process (MDP)}
-    The MDP introduces \textbf{Actions} ($A$), allowing the agent to influence the dynamics.
-    
-    \begin{itemize}
-        \item The transition matrix becomes a 3D tensor $|S| \times |S| \times |A|$.
-        \item Probability of transition depends on the action taken:
-    \end{itemize}
-    
-    \begin{equation}
-        P(s' | s, a) = P(S_{t+1} = s' | S_t = s, A_t = a)
-    \end{equation}
-    
-    \begin{itemize}
-        \item The Reward function also becomes action-dependent:
-    \end{itemize}
-    
-    \begin{equation}
-        R(s, a) = \mathbb{E}[R_{t+1} | S_t = s, A_t = a]
-    \end{equation}
+
+A Markov Decision Process (MDP) extends a MRP by introducing actions that influence system dynamics.
+
+\vspace{0.2cm}
+
+At each time step:
+\begin{itemize}
+    \item The agent observes the current state.
+    \item The agent selects an action.
+    \item The environment transitions to a new state and emits a reward.
+\end{itemize}
+
+\vspace{0.15cm}
+
+Transitions and rewards depend on the chosen action:
+\[
+P(s' \mid s, a), \qquad R(s, a)
+\]
+
 \end{frame}
 
 %------------------------------------------------
 
-\begin{frame}{The Policy ($\pi$)}
-    The \textbf{Policy} is the agent's strategy or "brain". It defines the behavior in any given state.
-    
-    \begin{block}{Stochastic Policy Definition}
-        It is a probability distribution over actions given states:
-        $$\pi(a|s) = P[A_t = a | S_t = s]$$
-    \end{block}
-    
-    \begin{itemize}
-        \item \textbf{Stochasticity:} Essential for exploration.
-        \item \textbf{Reduction:} If a policy is fixed, an MDP reduces to an MRP, as the transition probabilities become averaged over the policy's choices.
-    \end{itemize}
+\begin{frame}{Policy}
+
+The policy specifies how the agent behaves in each state.
+
+\vspace{0.2cm}
+
+Stochastic policy definition:
+\[
+\pi(a \mid s) = P(A_t = a \mid S_t = s)
+\]
+
+\vspace{0.2cm}
+
+Interpretation:
+\begin{itemize}
+    \item The policy maps states to probabilities over actions.
+    \item Stochasticity allows exploration of alternative behaviors.
+    \item Fixing the policy removes choice and yields a Markov Reward Process.
+\end{itemize}
+
 \end{frame}
 
 %------------------------------------------------
 
 \begin{frame}{Gymnasium: The RL Environment Standard}
-    \textbf{Gymnasium} provides a unified API for RL environments via the \texttt{Env} class.
-    
-    \vspace{0.3cm}
-    
-    \textbf{Core Interface}
-    \begin{itemize}
-        \item \textbf{Action Space:} Discrete or Continuous
-        \item \textbf{Observation Space:} Shape, bounds
-        \item \textbf{\texttt{reset()}} $\to s_0$
-        \item \textbf{\texttt{step(a)}} $\to$ (observation, reward, terminated, truncated, info)
-    \end{itemize}
-    
-    \vspace{0.3cm}
-    
-    \textbf{Space Types}
-    \begin{itemize}
-        \item \textbf{Discrete:} Finite actions (e.g., \texttt{Discrete(2)})
-        \item \textbf{Box:} Continuous $\mathbb{R}^n$ (e.g., images, sensors)
-        \item \textbf{Tuple/Dict:} Complex structures
-    \end{itemize}
+
+Gymnasium specifies a common abstraction for reinforcement learning environments.
+
+\vspace{0.25cm}
+
+Environment abstraction:
+\begin{itemize}
+    \item An environment is exposed through a unified interface.
+    \item Interaction follows a well defined agent environment loop.
+    \item This separation allows algorithms to be reused across tasks.
+\end{itemize}
+
+\vspace{0.25cm}
+
+Core elements:
+\begin{itemize}
+    \item Action space defines what decisions are available to the agent.
+    \item Observation space defines how the environment state is perceived.
+    \item \texttt{reset()} initializes an episode
+    \item \texttt{step(a)} advances the system by one interaction step.
+\end{itemize}
 
 \end{frame}
 
 %----------------------------------------------------------------------------------------
-%    SECTION: MCTS on CartPole-v1
+%    SECTION: MCTS on CartPole
 %----------------------------------------------------------------------------------------
 
-\begin{frame}{MCTS applied to CartPole-v1}
-    \textbf{Problem:} Balance pole on moving cart. \textbf{Reward:} $+1$ per step upright.
-    
+\begin{frame}{Monte Carlo Tree Search}
+
+    Monte Carlo Tree Search is a planning algorithm for sequential decision making.
+
+    \vspace{0.25cm}
+
+    Core idea:
+    \begin{itemize}
+        \item Decisions are evaluated by simulating possible future action sequences.
+        \item A search tree is grown incrementally from the current state.
+        \item Computational effort is focused on actions that appear promising.
+    \end{itemize}
+
+    \vspace{0.25cm}
+
+    Algorithm structure:
+    \begin{itemize}
+        \item The tree alternates between states and actions.
+        \item Simulations estimate long term outcomes without requiring a learned model.
+        \item Action quality is refined through repeated sampling.
+    \end{itemize}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{MCTS applied to CartPole}
+
+Task setting:
+\begin{itemize}
+    \item Control a cart to keep an attached pole balanced in an upright position.
+    \item Performance is measured by episode duration.
+\end{itemize}
+
+\vspace{0.2cm}
+
+Environment description:
+\begin{itemize}
+    \item Observations are low dimensional state vectors describing cart and pole dynamics.
+    \item State variables include cart position and velocity, and pole angle and angular velocity.
+    \item Actions correspond to discrete left or right forces applied to the cart.
+\end{itemize}
+
+\vspace{0.2cm}
+
+Reward design:
+\begin{itemize}
+    \item The agent receives a constant positive reward at each time step.
+    \item Reward accumulation directly reflects how long the pole remains balanced.
+    \item Episodes terminate when the pole falls or the cart leaves the allowed range.
+\end{itemize}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{MCTS demonstration on CartPole}
+
+    \centering
+    \movie[
+        width=0.5\textwidth,
+        height=0.375\textwidth,
+        showcontrols
+    ]{\includegraphics[width=0.5\textwidth]{images/preview/cart_pole.png}}{videos/cart_pole.mp4}
+
     \vspace{0.2cm}
-    
-    \textbf{Environment Specifications}
-    \begin{itemize}
-        \item \textbf{Obs.\ Space (Box 4):} [Cart Pos, Cart Vel, Pole Angle, Pole Ang.\ Vel]
-        \item \textbf{Action Space (Discrete 2):} \{0: Push Left, 1: Push Right\}
-    \end{itemize}
-    
-    \vspace{0.3cm}
 
-    \textbf{Core Algorithm Flow}
-    \begin{enumerate}
-        \item \textbf{Selection:} Traverse tree via UCB1 rule: $\bar{Q}(s,a) + 1.41\sqrt{\frac{\ln N(s)}{N(s,a)}}$
-        \item \textbf{Expansion:} Pop untried action, step simulator, create child node.
-        \item \textbf{Simulation:} Run random rollout (max 30 steps) to accumulate return $G$.
-        \item \textbf{Backpropagation:} Update $N \leftarrow N+1$, $W \leftarrow W+G$ along path to root.
-    \end{enumerate}
-    
+    \small MCTS controlled agent interacting with the CartPole environment
+
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+%    SECTION: CEM on LunarLander
+%----------------------------------------------------------------------------------------
+
+\begin{frame}{Cross Entropy Method}
+
+    Core idea:
+    \begin{itemize}
+        \item Maintain a probability distribution over candidate solutions.
+        \item Sample multiple solutions and evaluate them by running full episodes.
+        \item Select the highest performing samples as elite.
+        \item Update the distribution to increase the likelihood of elite solutions.
+    \end{itemize}
+
+    \vspace{0.25cm}
+
+    Use in reinforcement learning:
+    \begin{itemize}
+        \item The policy is represented by a set of parameters.
+        \item Policies are sampled, executed in the environment, and scored by total reward.
+        \item Only top performing policies influence the next parameter distribution.
+        \item Repeating this process progressively concentrates on better policies.
+    \end{itemize}
+
 \end{frame}
 
 %------------------------------------------------
 
-\begin{frame}{MCTS applied to CartPole-v1}
+\begin{frame}{CEM applied to LunarLander}
 
-    \textbf{State Synchronization (Critical)}
+    Task setting:
     \begin{itemize}
-        \item Before each phase: reset environment and force internal state to root.
-        \item Replay action sequence from root to current node.
-        \item Ensures simulator state matches tree node semantics.
+        \item Control a spacecraft to achieve a safe and fuel efficient landing.
+        \item Performance is evaluated over complete episodes.
     \end{itemize}
 
-    \vspace{0.3cm}
-
-    \textbf{Online Replanning}
-    \begin{itemize}
-        \item At each real timestep: run $\sim 40$ MCTS iterations from current observation.
-        \item Return root child with \textbf{highest visit count} (most robust under exploration noise).
-        \item Execute action in true environment; repeat.
-    \end{itemize}
-\end{frame}
-
-%------------------------------------------------
-
-\begin{frame}{MCTS applied to CartPole-v1}
-    \centering
-    \href{https://www.youtube.com/watch?v=LtIqCVRqRTw}{
-        \includegraphics[width=0.5\textwidth]{images/cart_pole_mcts.png}
-    }
-    \vfill
-    \small \textit{Click image to watch on YouTube}
-\end{frame}
-
-
-%----------------------------------------------------------------------------------------
-%    SECTION: CEM on CartPole-v1
-%----------------------------------------------------------------------------------------
-
-\begin{frame}{Cross-Entropy Method (CEM)}
-
-    \textbf{Core Idea}
-    \begin{itemize}
-        \item Maintain a distribution over policy parameters.
-        \item Sample policies from this distribution; evaluate on trajectories.
-        \item Identify \textit{elite} samples (top $p$-th percentile by reward).
-        \item Refit distribution to elite samples, concentrating mass on better regions.
-    \end{itemize}
-    
     \vspace{0.2cm}
-    
-    \textbf{RL Application}
+
+    Environment description:
     \begin{itemize}
-        \item Policy parameterized by neural network weights $\theta$.
-        \item Batch generation: sample $\theta$ from prior, rollout episodes, measure rewards.
-        \item Filter batch by percentile; supervise model to predict elite actions via cross-entropy loss.
-        \item Repeat: distribution implicitly shifts toward high-reward regions.
+        \item Observations encode position, velocity, orientation, and ground contact.
+        \item Actions correspond to discrete engine commands controlling thrust.
     \end{itemize}
-\end{frame}
 
-%------------------------------------------------
+    \vspace{0.2cm}
 
-\begin{frame}{CEM applied to CartPole-v1}
-
-    \textbf{Model Architecture}
-    A mlp with $[4 \to 128 \to 2]$ (observation to actions).
-
-    \textbf{Training Loop}
-    \begin{enumerate}
-        \item \textbf{Batch Generation:} Generate $B$ episodes using current policy $\pi_\theta$ (via softmax).
-        \item \textbf{Elite Filtering:} Compute reward percentile; keep steps from episodes exceeding threshold.
-        \item \textbf{Supervised Learning:} Train model via cross-entropy loss to predict elite actions:
-        $$\mathcal{L} = -\sum_{(s,a) \in \text{elite}} \log \pi_\theta(a|s)$$
-    \end{enumerate}
-
-    \vspace{0.3cm}
-
-    For final evaluation, argmax selects the best action
+    Reward design:
+    \begin{itemize}
+        \item Continuous shaping encourages stable descent and correct positioning.
+        \item Fuel usage is penalized to discourage unnecessary thrust.
+        \item Successful landings are strongly rewarded, crashes are heavily penalized.
+    \end{itemize}
 
 \end{frame}
 
 %------------------------------------------------
 
-\begin{frame}{CEM applied to CartPole-v1}
+\begin{frame}{CEM configuration for LunarLander}
+
+    Model architecture:
+    \begin{itemize}
+        \item Input: low-dimensional state vector (flattened environment observation).
+        \item Feature mapping: compact MLP with ReLU nonlinearities to capture state interactions.
+        \item Policy head: final linear layer producing action logits for discrete control.
+        \item Output: categorical action distribution over the 4 LunarLander actions.
+    \end{itemize}
+
+    \vspace{0.2cm}
+
+    Training and sampling:
+    \begin{itemize}
+        \item Adam optimizer with learning rate $10^{-3}$ and cross-entropy loss.
+        \item 1000 episodes sampled per epoch; top 20\% retained by return.
+        \item Episodes truncated at 300 steps; 10 optimization steps per epoch.
+    \end{itemize}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{Training results for LunarLander}
+
+\centering
+\includegraphics[width=0.45\textwidth]{images/results/lunar_lander.png}
+
+\vspace{0.2cm}
+\small Training performance of CEM on the LunarLander environment
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{CEM demonstration on LunarLander}
+
     \centering
-    \href{https://www.youtube.com/watch?v=N8gq00_RGWk}{
-        \includegraphics[width=0.5\textwidth]{images/cart_pole_cem.png}
-    }
-    \vfill
-    \small \textit{Click image to watch on YouTube}
+    \movie[
+        width=0.5\textwidth,
+        height=0.375\textwidth,
+        showcontrols
+    ]{\includegraphics[width=0.5\textwidth]{images/preview/lunar_lander.png}}{videos/lunar_lander.mp4}
+
+    \vspace{0.2cm}
+
+    \small CEM controlled agent interacting with the LunarLander environment
+
 \end{frame}
 
 %----------------------------------------------------------------------------------------
-%    SECTION: CEM on CarRacing-v3
+%    SECTION: CEM on Galaxian
 %----------------------------------------------------------------------------------------
 
-\begin{frame}{CEM applied to CarRacing-v3}
-    \textbf{Problem:} Control a race car from a top-down pixel perspective.
-    
-    \vspace{0.3cm}
-    
-    \textbf{Environment Specifications}
+\begin{frame}{CEM applied to Galaxian}
+
+    Task setting:
     \begin{itemize}
-        \item \textbf{Observation Space:} RGB Image ($96 \times 96 \times 3$).
-        \begin{itemize}
-            \item \textit{Preprocessing:} Resized to $224 \times 224$, Normalized for ResNet.
-        \end{itemize}
-        \item \textbf{Action Space (Discrete 5):}
-        \begin{enumerate}
-            \item Do Nothing
-            \item Steer Left
-            \item Steer Right
-            \item Gas
-            \item Brake
-        \end{enumerate}
-        \item \textbf{Reward Signal:}
-        \begin{itemize}
-            \item Positive reward for visiting new track tiles.
-            \item Small penalty ($-0.1$) per frame to encourage speed.
-        \end{itemize}
+        \item Control a spacecraft to survive enemy waves and score points.
+        \item Performance is evaluated over complete game episodes.
     \end{itemize}
+
+    \vspace{0.2cm}
+
+    Environment description:
+    \begin{itemize}
+        \item Observations are raw RGB images representing the full game screen.
+        \item Visual input encodes player position, enemies, bullets, and background.
+        \item Actions correspond to discrete controls such as moving left, moving right, and firing.
+    \end{itemize}
+
+    \vspace{0.2cm}
+
+    Reward design:
+    \begin{itemize}
+        \item Positive reward is given for destroying enemies.
+        \item Survival is encouraged by avoiding terminal states.
+        \item Episodes terminate when the player ship is destroyed.
+    \end{itemize}
+
 \end{frame}
 
 %------------------------------------------------
 
-\begin{frame}{CEM applied to CarRacing-v3}
-    \textbf{Model Architecture}
+\begin{frame}{CEM configuration for Galaxian}
+
+    Model architecture:
     \begin{itemize}
-        \item \textbf{Backbone:} \texttt{ResNet18} (Pretrained on ImageNet).
-        \item \textbf{Head:} Linear layer mapping features $\to$ 5 action logits.
+        \item Input: single RGB frame resized to $96 \times 96$ and normalized per channel.
+        \item Feature extractor: deep convolutional network capturing spatial structure of Atari frames.
+        \item Policy head: fully connected layers mapping visual features to action logits.
+        \item Output: categorical action distribution over the discrete Galaxian action space.
     \end{itemize}
 
-    \vspace{0.3cm}
+    \vspace{0.2cm}
 
-    \textbf{Action Masking.} The agent is guided through early exploration by masking suboptimal actions:
+    Training and sampling:
     \begin{itemize}
-        \item \textbf{Phase 1} Mask \{0, 1, 2, 4\}.
-        \begin{itemize}
-            \item \textit{Effect:} Forces \textbf{Gas} (Action 3) to prevent idling.
-        \end{itemize}
-        \item \textbf{Phase 2:} Full action space enabled.
+        \item Adam optimizer with learning rate $10^{-3}$ and cross-entropy loss.
+        \item 300 episodes sampled per epoch; top 20\% retained by return.
+        \item Episodes truncated at 400 steps; 20 optimization steps per epoch.
     \end{itemize}
+
 \end{frame}
 
 %------------------------------------------------
 
-\begin{frame}{CEM applied to CarRacing-v3}
+\begin{frame}{Training results for Galaxian}
+
+\centering
+\includegraphics[width=0.45\textwidth]{images/results/galaxian.png}
+
+\vspace{0.2cm}
+\small Training performance of CEM on the Galaxian environment
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{CEM demonstration on Galaxian}
+
     \centering
-    \href{https://www.youtube.com/watch?v=0bJDuGY-rt8}{
-        \includegraphics[width=0.5\textwidth]{images/car_racing_cem.png}
-    }
-    \vfill
-    \small \textit{Click image to watch on YouTube}
+    \movie[
+        width=0.5\textwidth,
+        height=0.375\textwidth,
+        showcontrols
+    ]{\includegraphics[width=0.5\textwidth]{images/preview/galaxian.png}}{videos/galaxian.mp4}
+
+    \vspace{0.2cm}
+
+    \small CEM controlled agent interacting with the Galaxian environment
+
 \end{frame}
 
-%------------------------------------------------
+%----------------------------------------------------------------------------------------
+%    SECTION: THANK-YOU SECTION
+%----------------------------------------------------------------------------------------
 
 \begin{frame}[plain, noframenumbering]
     \centering
 
     \Large{\centerline{\textbf{Thank you for your attention!}}}
-    \vspace{1.5cm}
+    \vspace{1.2cm}
+
     \footnotesize
     \textit{Alessio Russo}\\
     \textit{University of Parma}
+
+    \vspace{0.6cm}
+
+    \footnotesize
+    Code: \texttt{https://github.com/blkdmr/rl-algorithms}
 \end{frame}
 
 %----------------------------------------------------------------------------------------
